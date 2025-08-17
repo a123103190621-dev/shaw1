@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>灰雷·记账与对话</title>
+<style>
+  :root{
+    --bg-0:#0f1115;           /* 夜空灰 */
+    --bg-1:#151821;           /* 雷云灰 */
+    --bg-2:#1c2130;           /* 深灰蓝 */
+    --card:#1f2435;           /* 卡片底 */
+    --muted:#2a3146;          /* 线/分割 */
+    --text:#e9ecf2;           /* 主文字 */
+    --text-dim:#b8c0d9;       /* 次文字 */
+    --accent:#7f87ff;         /* 蓝紫 */
+    --accent-2:#a7adff;       /* 浅蓝紫 */
+    --warn:#ff6577;           /* 警示粉红 */
+    --ok:#54d1a9;             /* 成功绿 */
+    --shadow:0 10px 30px rgba(0,0,0,.35);
+    --radius:18px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;background:
+      radial-gradient(800px 600px at 80% -10%, rgba(127,135,255,.18), transparent 60%),
+      radial-gradient(600px 400px at 10% -10%, rgba(167,173,255,.14), transparent 60%),
+      linear-gradient(180deg, var(--bg-0), var(--bg-2));
+    color:var(--text);font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    display:flex;justify-content:center;align-items:stretch;
+  }
+  .app{
+    width:100%;max-width:460px;min-height:100vh;display:flex;flex-direction:column;gap:12px;
+    padding:12px;
+  }
+  header{
+    display:flex;align-items:center;gap:12px;padding:10px 12px;background:rgba(31,36,53,.85);
+    border:1px solid var(--muted);border-radius:var(--radius);backdrop-filter: blur(6px);
+    box-shadow: var(--shadow);
+  }
+  .avatar{
+    width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#4c4f7a);
+    border:2px solid rgba(255,255,255,.1);cursor:pointer;flex:0 0 auto;position:relative;overflow:hidden;
+  }
+  .avatar img{width:100%;height:100%;object-fit:cover;display:block}
+  .titles{flex:1 1 auto}
+  .titles h1{margin:0;font-size:16px;letter-spacing:.3px}
+  .titles p{margin:2px 0 0;color:var(--text-dim);font-size:12px}
+  .actions{display:flex;gap:8px}
+  button, .tab{
+    appearance:none;border:none;border-radius:12px;padding:10px 14px;cursor:pointer;
+    background:linear-gradient(180deg,#2a3146,#22283b);color:var(--text);font-weight:600;
+    border:1px solid #334066;box-shadow: inset 0 0 0 1px rgba(255,255,255,.03), var(--shadow);
+    transition:.2s ease;
+  }
+  button:hover,.tab:hover{transform:translateY(-1px);filter:brightness(1.04)}
+  .row{display:flex;gap:10px}
+  .tabs{
+    display:flex;gap:8px;background:rgba(31,36,53,.6);border:1px solid var(--muted);
+    border-radius:14px;padding:6px;box-shadow: var(--shadow);
+  }
+  .tab{flex:1;text-align:center;background:linear-gradient(180deg,#2b3148,#242a3f)}
+  .tab.active{background:linear-gradient(180deg,var(--accent),#5e66ff);color:#0b0d14;border-color:#7b82ff}
+  .statbar{
+    display:flex;gap:8px
+  }
+  .stat{
+    flex:1;background:rgba(31,36,53,.85);border:1px solid var(--muted);border-radius:16px;padding:10px 12px;box-shadow: var(--shadow);
+  }
+  .stat .label{color:var(--text-dim);font-size:12px}
+  .stat .value{font-size:18px;font-weight:800;margin-top:2px;letter-spacing:.3px}
+  .filter{
+    display:flex;gap:8px;align-items:center;background:rgba(31,36,53,.65);border:1px solid var(--muted);border-radius:14px;padding:8px 10px;box-shadow: var(--shadow);
+  }
+  select, input[type="text"], input[type="number"], input[type="datetime-local"], textarea{
+    width:100%;padding:10px 12px;border-radius:12px;border:1px solid #394466;background:#151a26;color:var(--text);
+    outline:none;box-shadow: inset 0 0 0 1px rgba(255,255,255,.03);
+  }
+  textarea{min-height:64px;resize:vertical}
+  .card{
+    background:rgba(31,36,53,.85);border:1px solid var(--muted);border-radius:var(--radius);padding:12px;box-shadow: var(--shadow);
+  }
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .list{display:flex;flex-direction:column;gap:10px}
+  .tx{
+    background:linear-gradient(180deg,#242a3e,#1d2334);border:1px solid #323b5c;border-radius:14px;padding:10px 10px;
+    display:flex;flex-direction:column;gap:8px;position:relative;
+  }
+  .tx .top{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+  .tag{font-size:11px;padding:3px 8px;border-radius:999px;background:#20263a;border:1px solid #394466;color:var(--accent-2)}
+  .amt{font-weight:800;letter-spacing:.3px}
+  .meta{color:var(--text-dim);font-size:12px}
+  .note{font-size:13px}
+  .tx .ops{display:flex;gap:8px}
+  .link{
+    font-size:12px;color:var(--accent-2);cursor:pointer;text-decoration:none;border:1px dashed #495489; padding:4px 8px;border-radius:10px;background:#171c29;
+  }
+  .danger{border-color:#7d3145;color:#ff9fb0;background:#20151b}
+  .success{border-color:#2f6e5c;color:#a3f0d4;background:#16201d}
+  .comments{border-top:1px dashed #3b456c;padding-top:8px;display:flex;flex-direction:column;gap:8px}
+  .c-item{display:flex;gap:8px}
+  .c-avatar{width:28px;height:28px;border-radius:50%;background:#2c3350;flex:0 0 auto;overflow:hidden}
+  .c-bubble{flex:1;background:#1a2032;border:1px solid #364069;border-radius:12px;padding:8px 10px}
+  .c-name{font-size:12px;color:var(--text-dim);margin-bottom:2px}
+  .footer-tip{color:var(--text-dim);font-size:11px;text-align:center;margin:6px 0 2px}
+  .inline{display:inline-flex;gap:8px;align-items:center}
+  .hl{color:var(--accent-2)}
+  .modal{
+    position:fixed;inset:0;display:none;place-items:center;background:rgba(4,6,12,.6);backdrop-filter: blur(6px);z-index:99;
+  }
+  .modal.show{display:grid}
+  .modal .panel{width:min(92vw,460px);max-height:88vh;overflow:auto}
+  .subtle{color:var(--text-dim);font-size:12px}
+  .row-wrap{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{padding:6px 10px;border-radius:999px;background:#171c29;border:1px solid #344067;color:var(--text-dim);cursor:pointer}
+  .chip.active{color:#0b0d14;background:linear-gradient(180deg,var(--accent),#5e66ff);border-color:#7b82ff}
+  .small{font-size:12px}
+  .muted{opacity:.75}
+  .sep{height:1px;background:linear-gradient(90deg,transparent,#364069,transparent);margin:10px 0}
+  .hidden{display:none}
+  .right{margin-left:auto}
+  /* 小屏下让表单控件更“触屏” */
+  @media (hover: none){
+    button, .tab, select, input, textarea{font-size:16px}
+  }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+  <!-- 顶部栏 -->
+  <header>
+    <div class="avatar" id="avatarBtn" title="点击查看/更换头像">
+      <img id="avatarImg" alt="avatar">
+    </div>
+    <div class="titles">
+      <h1 id="appTitle">灰雷·记账与对话</h1>
+      <p id="aiTiny">AI：<span id="aiNameTiny">雷鸣</span>｜主题：灰色雷暴</p>
+    </div>
+    <div class="actions">
+      <button id="openSettings">人设&API</button>
+    </div>
+  </header>
+
+  <!-- 账本切换/重命名 -->
+  <div class="tabs" id="ledgerTabs">
+    <button class="tab active" id="tabSaving">存钱</button>
+    <button class="tab" id="tabSpending">花钱</button>
+  </div>
+
+  <!-- 数据概览 -->
+  <div class="statbar">
+    <div class="stat">
+      <div class="label" id="statLabelMain">存款余额</div>
+      <div class="value" id="statMainValue">¥0.00</div>
+      <div class="subtle small" id="statSecondary"></div>
+    </div>
+    <div class="stat">
+      <div class="label">筛选区间</div>
+      <div class="inline">
+        <select id="periodSelect" aria-label="统计区间">
+          <option value="all">全部</option>
+          <option value="week">本周</option>
+          <option value="month" selected>本月</option>
+          <option value="year">本年</option>
+        </select>
+        <button id="renameLedgerBtn" title="重命名当前账本">重命名</button>
+      </div>
+      <div class="subtle small" id="periodHint"></div>
+    </div>
+  </div>
+
+  <!-- 记账表单 -->
+  <div class="card">
+    <div class="row grid">
+      <div>
+        <label class="small subtle">账户</label>
+        <select id="account">
+          <option value="微信">微信</option>
+          <option value="支付宝">支付宝</option>
+          <option value="银行卡">银行卡</option>
+        </select>
+      </div>
+      <div>
+        <label class="small subtle">金额 (¥)</label>
+        <input type="number" id="amount" inputmode="decimal" placeholder="例如 88.88" step="0.01" min="0">
+      </div>
+      <div>
+        <label class="small subtle">标签</label>
+        <select id="tag">
+          <option>零食</option><option>衣服</option><option>交通</option><option>旅行</option>
+          <option>话费网费</option><option>学习</option><option>日用品</option><option>美妆</option>
+          <option>医疗</option><option>娱乐</option><option>人情往来</option><option>运动</option>
+          <option>水电煤</option><option selected>其他</option>
+        </select>
+      </div>
+      <div>
+        <label class="small subtle">时间</label>
+        <input type="datetime-local" id="when">
+      </div>
+      <div style="grid-column:1/-1">
+        <label class="small subtle">备注</label>
+        <input type="text" id="note" placeholder="写点什么…">
+      </div>
+    </div>
+    <div class="sep"></div>
+    <div class="row">
+      <button id="addTxBtn" class="right">记一笔到「<span id="currLedgerNameInBtn">存钱</span>」</button>
+    </div>
+    <div class="footer-tip">记账后会发送给AI（遵循你的人设指令）进行分析并回帖。</div>
+  </div>
+
+  <!-- 列表 -->
+  <div class="card">
+    <div class="filter">
+      <div class="inline" style="gap:6px">
+        <span class="small subtle">排序</span>
+        <select id="sortSelect">
+          <option value="timeDesc" selected>时间新→旧</option>
+          <option value="timeAsc">时间旧→新</option>
+          <option value="amtDesc">金额大→小</option>
+          <option value="amtAsc">金额小→大</option>
+        </select>
+      </div>
+      <div class="inline right" style="gap:6px">
+        <span class="small subtle">快速筛选</span>
+        <select id="quickTag">
+          <option value="">全部标签</option>
+          <option>零食</option><option>衣服</option><option>交通</option><option>旅行</option>
+          <option>话费网费</option><option>学习</option><option>日用品</option><option>美妆</option>
+          <option>医疗</option><option>娱乐</option><option>人情往来</option><option>运动</option>
+          <option>水电煤</option><option>其他</option>
+        </select>
+      </div>
+    </div>
+    <div class="list" id="txList"></div>
+    <div class="footer-tip" id="emptyTip" style="display:none">这里空空的。先在上面记一笔吧。</div>
+  </div>
+</div>
+
+<!-- 人设&API 设置 -->
+<div class="modal" id="settingsModal" aria-hidden="true">
+  <div class="panel card">
+    <h3 style="margin:0 0 8px">人设 & API 设置</h3>
+    <p class="subtle">你可以在这里定义AI的性格、人设与称呼；同时配置调用地址与密钥。AI的所有回复都会严格服从人设。</p>
+    <div class="grid" style="grid-template-columns:1fr 1fr">
+      <div style="grid-column:1/-1">
+        <label class="small subtle">AI 名称（用于评论展示）</label>
+        <input type="text" id="aiName" placeholder="例如：雷鸣、先生、狐狸…">
+      </div>
+      <div style="grid-column:1/-1">
+        <label class="small subtle">人设指令（System）</label>
+        <textarea id="persona" placeholder="写下你希望AI遵守的说话风格、立场与任务…"></textarea>
+      </div>
+      <div>
+        <label class="small subtle">模型标识</label>
+        <input type="text" id="model" placeholder="例如 gpt-4o-mini / llama3.1 / 自定义">
+      </div>
+      <div>
+        <label class="small subtle">API 地址</label>
+        <input type="text" id="apiEndpoint" placeholder="https://api.example.com/v1/chat/completions">
+      </div>
+      <div>
+        <label class="small subtle">API 密钥</label>
+        <input type="text" id="apiKey" placeholder="sk-********">
+      </div>
+      <div>
+        <label class="small subtle">鉴权头 (可选)</label>
+        <select id="authHeader">
+          <option value="bearer" selected>Authorization: Bearer &lt;key&gt;</option>
+          <option value="x-api-key">X-API-Key: &lt;key&gt;</option>
+        </select>
+      </div>
+      <div style="grid-column:1/-1">
+        <label class="small subtle">测试提示（不会入库）</label>
+        <input type="text" id="testPrompt" placeholder="输入一句话来测试API响应">
+      </div>
+    </div>
+    <div class="sep"></div>
+    <div class="row">
+      <button id="testApiBtn">测试 API</button>
+      <span class="subtle" id="testApiRes"></span>
+      <span class="right"></span>
+      <button id="closeSettings">关闭</button>
+      <button id="saveSettings" class="success">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 头像设置 -->
+<div class="modal" id="avatarModal" aria-hidden="true">
+  <div class="panel card">
+    <h3 style="margin:0 0 8px">头像</h3>
+    <div class="row">
+      <div class="avatar" style="width:64px;height:64px;">
+        <img id="avatarPreview" alt="avatar-preview">
+      </div>
+      <div class="subtle">点击下方更换头像，支持本地图片（不外传，储存在你的浏览器）。</div>
+    </div>
+    <div class="sep"></div>
+    <input type="file" id="avatarFile" accept="image/*">
+    <div class="row" style="margin-top:8px">
+      <button id="closeAvatar">关闭</button>
+      <button id="saveAvatar" class="success right">保存头像</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ========= 数据层：localStorage ========= */
+const LS_KEY = 'greybolt-book';
+const DEFAULT_STATE = {
+  settings:{
+    aiName:'雷鸣',
+    persona:`你是一个成熟稳重、带有年长者宠溺与温柔感的对话者，偶尔带一点坏心眼的幽默。表达需兼具清晰逻辑与情感温度；对话中保持灰雷主题的美学隐喻与比喻，不空泛劝慰。`,
+    model:'gpt-4o-mini',
+    apiEndpoint:'',
+    apiKey:'',
+    authHeader:'bearer',
+    avatar:null
+  },
+  ledgers:{
+    saving:{ id:'saving', name:'存钱', type:'saving', balance:0, tx:[] },
+    spending:{ id:'spending', name:'花钱', type:'spending', total:0, tx:[] }
+  },
+  ui:{ current:'saving' }
+};
+function loadState(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if(!raw) return structuredClone(DEFAULT_STATE);
+    const obj = JSON.parse(raw);
+    // 向后兼容字段
+    if(!obj.settings) obj.settings = structuredClone(DEFAULT_STATE.settings);
+    if(!obj.ledgers) obj.ledgers = structuredClone(DEFAULT_STATE.ledgers);
+    if(!obj.ui) obj.ui = {current:'saving'};
+    return obj;
+  }catch(e){ console.warn('load err',e); return structuredClone(DEFAULT_STATE); }
+}
+function saveState(){ localStorage.setItem(LS_KEY, JSON.stringify(state)); }
+let state = loadState();
+
+/* ========= 工具函数 ========= */
+function fmtMoney(n){ n = Number(n||0); return (n<0?'-':'') + '¥' + Math.abs(n).toFixed(2); }
+function byId(id){ return document.getElementById(id); }
+function uid(){ return 't'+Math.random().toString(36).slice(2)+Date.now().toString(36); }
+function toDate(v){ return v? new Date(v): new Date(); }
+function startOf(type, d=new Date()){
+  const x=new Date(d);
+  if(type==='week'){
+    const day = (x.getDay()+6)%7; // 周一为0
+    x.setHours(0,0,0,0); x.setDate(x.getDate()-day);
+  }else if(type==='month'){
+    x.setHours(0,0,0,0); x.setDate(1);
+  }else if(type==='year'){
+    x.setHours(0,0,0,0); x.setMonth(0,1);
+  }else{ x.setTime(0) }
+  return x;
+}
+function endOf(type, d=new Date()){
+  const x=new Date(d);
+  if(type==='week'){
+    const day = (x.getDay()+6)%7;
+    x.setHours(23,59,59,999); x.setDate(x.getDate() + (6-day));
+  }else if(type==='month'){
+    x.setHours(23,59,59,999); x.setMonth(x.getMonth()+1,0);
+  }else if(type==='year'){
+    x.setHours(23,59,59,999); x.setMonth(11,31);
+  }else{ x.setTime(8640000000000000); }
+  return x;
+}
+function within(d, type){
+  if(type==='all') return true;
+  const dt = new Date(d).getTime();
+  return dt>=startOf(type).getTime() && dt<=endOf(type).getTime();
+}
+
+/* ========= 渲染 ========= */
+const elements = {
+  avatarBtn: byId('avatarBtn'),
+  avatarImg: byId('avatarImg'),
+  avatarModal: byId('avatarModal'),
+  avatarPreview: byId('avatarPreview'),
+  avatarFile: byId('avatarFile'),
+  closeAvatar: byId('closeAvatar'),
+  saveAvatar: byId('saveAvatar'),
+
+  settingsModal: byId('settingsModal'),
+  openSettings: byId('openSettings'),
+  closeSettings: byId('closeSettings'),
+  saveSettings: byId('saveSettings'),
+  aiName: byId('aiName'),
+  aiNameTiny: byId('aiNameTiny'),
+  persona: byId('persona'),
+  model: byId('model'),
+  apiEndpoint: byId('apiEndpoint'),
+  apiKey: byId('apiKey'),
+  authHeader: byId('authHeader'),
+  testPrompt: byId('testPrompt'),
+  testApiBtn: byId('testApiBtn'),
+  testApiRes: byId('testApiRes'),
+
+  tabSaving: byId('tabSaving'),
+  tabSpending: byId('tabSpending'),
+  ledgerTabs: byId('ledgerTabs'),
+
+  statLabelMain: byId('statLabelMain'),
+  statMainValue: byId('statMainValue'),
+  statSecondary: byId('statSecondary'),
+  periodSelect: byId('periodSelect'),
+  periodHint: byId('periodHint'),
+
+  account: byId('account'),
+  amount: byId('amount'),
+  tag: byId('tag'),
+  when: byId('when'),
+  note: byId('note'),
+  addTxBtn: byId('addTxBtn'),
+  currLedgerNameInBtn: byId('currLedgerNameInBtn'),
+
+  sortSelect: byId('sortSelect'),
+  quickTag: byId('quickTag'),
+  txList: byId('txList'),
+  emptyTip: byId('emptyTip'),
+
+  renameLedgerBtn: byId('renameLedgerBtn')
+};
+
+function syncHeader(){
+  const {settings} = state;
+  elements.aiNameTiny.textContent = settings.aiName || 'AI';
+  const av = settings.avatar;
+  if(av){ elements.avatarImg.src = av; elements.avatarPreview.src=av }
+  else{
+    // 生成一个简易SVG头像
+    const svg = encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64'>
+      <defs><linearGradient id='g' x1='0' x2='1'><stop stop-color='#7f87ff'/><stop offset='1' stop-color='#4c4f7a'/></linearGradient></defs>
+      <rect width='100%' height='100%' fill='url(#g)'/>
+      <circle cx='32' cy='28' r='12' fill='rgba(255,255,255,.85)'/>
+      <rect x='16' y='44' width='32' height='10' rx='5' fill='rgba(255,255,255,.85)'/>
+    </svg>`);
+    const url = `data:image/svg+xml;utf8,${svg}`;
+    elements.avatarImg.src=url; elements.avatarPreview.src=url;
+  }
+}
+
+function activeLedger(){
+  return state.ledgers[state.ui.current==='saving'?'saving':'spending'];
+}
+
+function computeStats(){
+  const l = activeLedger();
+  const period = elements.periodSelect.value;
+  let sum=0;
+  let count=0;
+  for(const t of l.tx){
+    if(!within(t.time, period)) continue;
+    sum += Number(t.amount||0);
+    count++;
+  }
+  let labelMain, mainValue, secondary;
+  if(l.type==='saving'){
+    labelMain='存款余额';
+    mainValue=fmtMoney(l.tx.reduce((a,b)=>a+Number(b.amount||0),0));
+    secondary=`本${period==='all'?'全部':period==='week'?'周':period==='month'?'月':'年'}入账：${fmtMoney(sum)}（${count} 笔）`;
+  }else{
+    labelMain='总消费';
+    mainValue=fmtMoney(l.tx.reduce((a,b)=>a+Number(b.amount||0),0));
+    secondary=`本${period==='all'?'全部':period==='week'?'周':period==='month'?'月':'年'}消费：${fmtMoney(sum)}（${count} 笔）`;
+  }
+  elements.statLabelMain.textContent=labelMain;
+  elements.statMainValue.textContent=mainValue;
+  elements.statSecondary.textContent=secondary;
+
+  const ps = elements.periodSelect.value;
+  const [s,e] = ps==='all' ? ['—','—'] : [startOf(ps), endOf(ps)];
+  elements.periodHint.textContent = ps==='all' ? '统计区间：全部' :
+    `统计区间：${s.toLocaleDateString()} - ${e.toLocaleDateString()}`;
+}
+
+function renderTabs(){
+  const {saving, spending} = state.ledgers;
+  elements.tabSaving.textContent = saving.name;
+  elements.tabSpending.textContent = spending.name;
+  elements.currLedgerNameInBtn.textContent = activeLedger().name;
+  elements.tabSaving.classList.toggle('active', state.ui.current==='saving');
+  elements.tabSpending.classList.toggle('active', state.ui.current==='spending');
+  computeStats();
+  renderList();
+}
+
+function renderList(){
+  const l = activeLedger();
+  let arr = [...l.tx];
+
+  const filterTag = elements.quickTag.value;
+  if(filterTag) arr = arr.filter(t=>t.tag===filterTag);
+
+  const sort = elements.sortSelect.value;
+  if(sort==='timeDesc') arr.sort((a,b)=>new Date(b.time)-new Date(a.time));
+  if(sort==='timeAsc') arr.sort((a,b)=>new Date(a.time)-new Date(b.time));
+  if(sort==='amtDesc') arr.sort((a,b)=>b.amount-a.amount);
+  if(sort==='amtAsc') arr.sort((a,b)=>a.amount-b.amount);
+
+  elements.txList.innerHTML='';
+  if(arr.length===0){ elements.emptyTip.style.display='block'; return; }
+  elements.emptyTip.style.display='none';
+
+  for(const t of arr){
+    const el = document.createElement('div');
+    el.className='tx';
+    el.innerHTML = `
+      <div class="top">
+        <div class="inline" style="gap:8px;align-items:center">
+          <span class="tag">${t.tag}</span>
+          <span class="meta">${new Date(t.time).toLocaleString()}</span>
+        </div>
+        <div class="amt">${l.type==='spending' ? '-' : '+'}${fmtMoney(t.amount).slice(1)}</div>
+      </div>
+      <div class="note">${t.note ? escapeHtml(t.note) : '<span class="subtle">（无备注）</span>'}</div>
+      <div class="meta">账户：${t.account} ｜ 账本：${l.name}</div>
+      <div class="ops">
+        <a class="link" data-op="comment" data-id="${t.id}">写评论</a>
+        <a class="link" data-op="askai" data-id="${t.id}">AI回复</a>
+        <a class="link danger right" data-op="delete" data-id="${t.id}">删除</a>
+      </div>
+      <div class="comments" id="c_${t.id}">
+        ${ (t.comments||[]).map(renderComment).join('') }
+        <div class="row" style="gap:8px">
+          <input type="text" placeholder="写下你的评论…" data-cinput="${t.id}">
+          <button data-csend="${t.id}">发送</button>
+        </div>
+      </div>
+    `;
+    elements.txList.appendChild(el);
+  }
+}
+
+function renderComment(c){
+  const isAI = c.by==='ai';
+  const name = isAI ? (state.settings.aiName||'AI') : '我';
+  const av = isAI ? aiMiniAvatar() : userMiniAvatar();
+  return `
+  <div class="c-item">
+    <div class="c-avatar">${av}</div>
+    <div class="c-bubble">
+      <div class="c-name">${escapeHtml(name)} <span class="subtle small">· ${new Date(c.time).toLocaleString()}</span></div>
+      <div>${formatContent(c.text)}</div>
+    </div>
+  </div>`;
+}
+function aiMiniAvatar(){
+  return `<svg width="28" height="28" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg">
+  <defs><linearGradient id="g2" x1="0" x2="1"><stop stop-color="#7f87ff"/><stop offset="1" stop-color="#4c4f7a"/></linearGradient></defs>
+  <rect rx="14" width="28" height="28" fill="url(#g2)"/>
+  <circle cx="14" cy="11" r="6" fill="rgba(255,255,255,.85)"/>
+  <rect x="7" y="18" width="14" height="6" rx="3" fill="rgba(255,255,255,.85)"/>
+  </svg>`;
+}
+function userMiniAvatar(){
+  return `<svg width="28" height="28" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg">
+  <rect rx="14" width="28" height="28" fill="#1f2435"/>
+  <path d="M6 22c1.5-3.6 4.6-5.4 8-5.4S20.5 18.4 22 22" fill="none" stroke="#a7adff" stroke-width="2"/>
+  <circle cx="14" cy="10" r="5" fill="none" stroke="#a7adff" stroke-width="2"/>
+  </svg>`;
+}
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
+}
+function formatContent(s){
+  // 支持 (AI的想法) 这种括号；支持简单换行
+  return escapeHtml(s).replace(/\n/g,'<br>');
+}
+
+/* ========= 事件 ========= */
+elements.tabSaving.addEventListener('click',()=>{ state.ui.current='saving'; saveState(); renderTabs(); });
+elements.tabSpending.addEventListener('click',()=>{ state.ui.current='spending'; saveState(); renderTabs(); });
+
+elements.periodSelect.addEventListener('change',()=>{ computeStats(); renderList(); });
+elements.sortSelect.addEventListener('change',renderList);
+elements.quickTag.addEventListener('change',renderList);
+
+elements.renameLedgerBtn.addEventListener('click',()=>{
+  const l = activeLedger();
+  const name = prompt('输入新的账本名称：', l.name);
+  if(!name) return;
+  l.name = name.trim().slice(0,10)||l.name;
+  saveState(); renderTabs();
+});
+
+elements.addTxBtn.addEventListener('click', async ()=>{
+  const l = activeLedger();
+  const acc = elements.account.value;
+  const amt = parseFloat(elements.amount.value);
+  const tag = elements.tag.value;
+  const when = elements.when.value || new Date().toISOString().slice(0,16);
+  const note = elements.note.value.trim();
+
+  if(!(amt>0)){ alert('请输入有效金额'); return; }
+
+  const t = {
+    id: uid(),
+    account: acc,
+    amount: amt,
+    tag, time: new Date(when).toISOString(),
+    note, comments:[]
+  };
+  l.tx.push(t);
+  saveState(); computeStats(); renderList();
+  elements.amount.value=''; elements.note.value='';
+
+  // 自动为这笔记账创建AI分析评论
+  await aiReplyForTransaction(t, l).catch(()=>{});
+});
+
+elements.txList.addEventListener('click', async (e)=>{
+  const a = e.target.closest('a.link');
+  if(!a) return;
+  const id = a.dataset.id;
+  const op = a.dataset.op;
+  const l = activeLedger();
+  const t = l.tx.find(x=>x.id===id);
+  if(!t) return;
+
+  if(op==='delete'){
+    if(confirm('确认删除这条记账？此操作不可恢复。')){
+      l.tx = l.tx.filter(x=>x.id!==id);
+      saveState(); computeStats(); renderList();
+    }
+  }
+  else if(op==='askai'){
+    await aiReplyForTransaction(t,l,true).catch(()=>{});
+  }
+  else if(op==='comment'){
+    // 聚焦输入框
+    const input = document.querySelector(`[data-cinput="${id}"]`);
+    input && input.focus();
+  }
+});
+
+elements.txList.addEventListener('click', async (e)=>{
+  const btn = e.target.closest('button');
+  if(!btn) return;
+  const id = btn.getAttribute('data-csend');
+  if(!id) return;
+  const l = activeLedger();
+  const t = l.tx.find(x=>x.id===id);
+  const input = document.querySelector(`[data-cinput="${id}"]`);
+  const text = (input?.value||'').trim();
+  if(!text){ alert('写点什么再发送吧。'); return; }
+  t.comments = t.comments||[];
+  t.comments.push({by:'user', time:new Date().toISOString(), text});
+  input.value='';
+  saveState(); renderList();
+});
+
+elements.openSettings.addEventListener('click',()=>{ openModal(elements.settingsModal); fillSettings(); });
+elements.closeSettings.addEventListener('click',()=>closeModal(elements.settingsModal));
+elements.saveSettings.addEventListener('click',()=>{
+  state.settings.aiName = elements.aiName.value.trim() || 'AI';
+  state.settings.persona = elements.persona.value.trim();
+  state.settings.model = elements.model.value.trim() || 'gpt-4o-mini';
+  state.settings.apiEndpoint = elements.apiEndpoint.value.trim();
+  state.settings.apiKey = elements.apiKey.value.trim();
+  state.settings.authHeader = elements.authHeader.value;
+  saveState(); syncHeader(); closeModal(elements.settingsModal);
+});
+elements.testApiBtn.addEventListener('click', async ()=>{
+  elements.testApiRes.textContent='测试中…';
+  try{
+    const res = await callAPI({
+      model: elements.model.value.trim() || 'gpt-4o-mini',
+      system: elements.persona.value.trim() || '你是对话助手。',
+      user: elements.testPrompt.value.trim() || '你好，来一句自我介绍。'
+    });
+    elements.testApiRes.textContent = res.ok ? '✅ 成功' : ('❌ ' + (res.error||'error'));
+  }catch(err){
+    elements.testApiRes.textContent='❌ '+ (err?.message||'error');
+  }
+});
+
+elements.avatarBtn.addEventListener('click', ()=> openModal(elements.avatarModal));
+elements.closeAvatar.addEventListener('click', ()=> closeModal(elements.avatarModal));
+elements.saveAvatar.addEventListener('click', ()=>{
+  if(elements.avatarPreview.src) state.settings.avatar = elements.avatarPreview.src;
+  saveState(); syncHeader(); closeModal(elements.avatarModal);
+});
+elements.avatarFile.addEventListener('change', async (e)=>{
+  const file = e.target.files?.[0];
+  if(!file) return;
+  const url = await fileToDataURL(file);
+  elements.avatarPreview.src = url;
+});
+
+/* ========= AI 调用 ========= */
+async function aiReplyForTransaction(t, ledger, explicit=false){
+  const {settings} = state;
+  const sys = settings.persona || DEFAULT_STATE.settings.persona;
+  const aiName = settings.aiName || 'AI';
+  const userSummary = [
+    `这是一条${ledger.type==='spending'?'消费':'存入'}记录。`,
+    `账本：${ledger.name}`,
+    `金额：¥${Number(t.amount).toFixed(2)}`,
+    `标签：${t.tag}`,
+    `账户：${t.account}`,
+    `备注：${t.note || '（无）'}`,
+    `时间：${new Date(t.time).toLocaleString()}`,
+  ].join('；');
+
+  const userPrompt = `请基于人设执行：对这条记账进行简短而有温度的点评与建议，允许在合适位置加入一行括号内的“AI的想法”。输出不超过90字。
+${userSummary}`;
+
+  // 若未配置API，则给本地fallback（不固定内容）
+  if(!settings.apiEndpoint || !settings.apiKey){
+    const local = localFallbackReply(ledger, t);
+    pushAiComment(t, local);
+    return;
+  }
+
+  const res = await callAPI({ model: settings.model, system: sys, user: userPrompt });
+  if(res.ok && res.text){
+    pushAiComment(t, res.text);
+  }else{
+    pushAiComment(t, 'error');
+  }
+}
+
+function pushAiComment(t, content){
+  t.comments = t.comments||[];
+  t.comments.push({by:'ai', time:new Date().toISOString(), text: content});
+  saveState(); renderList();
+}
+
+function localFallbackReply(ledger, t){
+  const tone = ledger.type==='spending' ? '收住手指，别让情绪带着卡刷冒火' : '稳一步就近岸，慢一点也无妨';
+  const hint = ledger.type==='spending'
+    ? (t.tag==='娱乐'?'可以把快乐分期到更多的明天': t.tag==='零食'?'半份也甜': '按月回看，看看是否值得')
+    : (t.tag==='学习'?'给未来的自己打了个利息':'先留一点应急款');
+  const thought = `（我在想：${t.tag}这类支出，${ledger.type==='spending'?'设个上限':'设个目标'}会更安心）`;
+  return `${tone}。${hint}。${thought}`;
+}
+
+async function callAPI({model, system, user}){
+  try{
+    const ep = state.settings.apiEndpoint;
+    const key = state.settings.apiKey;
+    const auth = state.settings.authHeader || 'bearer';
+    const body = {
+      model: model||'gpt-4o-mini',
+      messages:[
+        {role:'system', content: system||'你是对话助手。'},
+        {role:'user', content: user||'你好'}
+      ],
+      temperature:0.7
+    };
+    const headers = {'Content-Type':'application/json'};
+    if(key){
+      if(auth==='bearer') headers['Authorization'] = 'Bearer ' + key;
+      else headers['X-API-Key'] = key;
+    }
+    const r = await fetch(ep, {method:'POST', headers, body: JSON.stringify(body)});
+    const data = await r.json().catch(()=> ({}));
+    // 兼容多种返回结构
+    let text='';
+    if(data?.choices?.[0]?.message?.content) text = data.choices[0].message.content;
+    else if(Array.isArray(data?.choices) && data.choices[0]?.text) text = data.choices[0].text;
+    else if(data?.reply) text = data.reply;
+    if(!r.ok || !text) return {ok:false, error: data?.error?.message || 'error'};
+    return {ok:true, text};
+  }catch(err){
+    return {ok:false, error:err?.message||'error'};
+  }
+}
+
+/* ========= 模态框工具 ========= */
+function openModal(m){ m.classList.add('show'); m.setAttribute('aria-hidden','false'); }
+function closeModal(m){ m.classList.remove('show'); m.setAttribute('aria-hidden','true'); }
+function fillSettings(){
+  const s = state.settings;
+  elements.aiName.value = s.aiName||'AI';
+  elements.persona.value = s.persona||'';
+  elements.model.value = s.model||'';
+  elements.apiEndpoint.value = s.apiEndpoint||'';
+  elements.apiKey.value = s.apiKey||'';
+  elements.authHeader.value = s.authHeader||'bearer';
+}
+
+/* ========= 文件工具 ========= */
+function fileToDataURL(file){
+  return new Promise((resolve,reject)=>{
+    const r = new FileReader();
+    r.onload = ()=> resolve(r.result);
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+}
+
+/* ========= 初始化 ========= */
+function initDefaults(){
+  // 时间默认当前
+  const now = new Date();
+  const iso = new Date(now.getTime()-now.getTimezoneOffset()*60000).toISOString().slice(0,16);
+  elements.when.value = iso;
+  syncHeader();
+  renderTabs();
+}
+initDefaults();
+
+/* ========= 可访问性小增强 ========= */
+document.addEventListener('keydown', (e)=>{
+  if(e.key==='Escape'){
+    [elements.settingsModal, elements.avatarModal].forEach(m=>m.classList.contains('show') && closeModal(m));
+  }
+});
+
+/* ========= 结束 ========= */
+</script>
+</body>
+</html>
